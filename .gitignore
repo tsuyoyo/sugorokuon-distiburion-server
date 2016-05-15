@@ -1,0 +1,6 @@
+.idea
+.gradle
+nhk_testdata
+**/*.iml
+build
+src/main/resources/config/application.yml
