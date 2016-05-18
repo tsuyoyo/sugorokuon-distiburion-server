@@ -20,6 +20,8 @@ import java.util.*;
 @Log4j
 public class ProgramManagerService {
 
+    static final private String JST = "JST";
+
     static private Logger logger = Logger.getLogger(ProgramManagerService.class);
 
     private static class OneDayAreaTable {
@@ -52,13 +54,14 @@ public class ProgramManagerService {
         update();
     }
 
-    @Scheduled(cron = "0 10 5 * * 1", zone = "Asia/Tokyo")
+    @Scheduled(cron = "0 10 5 * * *", zone = "Asia/Tokyo")
     public void update() {
 
         // 動いた証拠にログとして出す
         SimpleDateFormat format = new SimpleDateFormat("yyyy/MM/dd - HH:mm:ss");
         TimeZone timeZone = TimeZone.getTimeZone("JST");
-        logger.info("Update timetable : " + format.format(new Date(Calendar.getInstance(timeZone).getTimeInMillis())));
+        format.setTimeZone(timeZone);
+        logger.info("Update timetable : " + format.format(Calendar.getInstance().getTime()));
 
         // 前日のキャッシュは要らないので消す
         programDataManager.clearCache(getDateForYesterday());
@@ -138,6 +141,7 @@ public class ProgramManagerService {
 
     private Date getDateForToday() {
         Calendar d = Calendar.getInstance();
+        d.setTimeZone(TimeZone.getTimeZone(JST));
 
         if (d.get(Calendar.HOUR_OF_DAY) < 5) {
             d.add(Calendar.DATE, -1);
@@ -148,6 +152,8 @@ public class ProgramManagerService {
 
     private Date getDateForYesterday() {
         Calendar c = Calendar.getInstance();
+        c.setTimeZone(TimeZone.getTimeZone(JST));
+
         c.setTime(getDateForToday());
         c.add(Calendar.DATE, -1);
         return c.getTime();
@@ -155,6 +161,8 @@ public class ProgramManagerService {
 
     private Date getDateForTomorrow() {
         Calendar c = Calendar.getInstance();
+        c.setTimeZone(TimeZone.getTimeZone(JST));
+
         c.setTime(getDateForToday());
         c.add(Calendar.DATE, 1);
         return c.getTime();
