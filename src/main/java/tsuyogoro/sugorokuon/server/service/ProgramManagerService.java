@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import tsuyogoro.sugorokuon.server.constant.NhkApiConstants;
 import tsuyogoro.sugorokuon.server.model.Program;
+import tsuyogoro.sugorokuon.server.utils.DateUtils;
 
 import javax.annotation.PostConstruct;
 import java.text.SimpleDateFormat;
@@ -19,8 +20,6 @@ import java.util.*;
 @Service
 @Log4j
 public class ProgramManagerService {
-
-    static final private String JST = "JST";
 
     static private Logger logger = Logger.getLogger(ProgramManagerService.class);
 
@@ -58,12 +57,11 @@ public class ProgramManagerService {
     public void update() {
 
         // 動いた証拠にログとして出す
-        SimpleDateFormat format = new SimpleDateFormat("yyyy/MM/dd - HH:mm:ss");
-        TimeZone timeZone = TimeZone.getTimeZone("JST");
-        format.setTimeZone(timeZone);
+        SimpleDateFormat format = DateUtils.getSimpleDateFormatInJst("yyyy/MM/dd - HH:mm:ss");
         logger.info("Update timetable : " + format.format(Calendar.getInstance().getTime()));
 
         // 前日のキャッシュは要らないので消す
+        logger.info("  yesterday : " + format.format(getDateForYesterday()));
         programDataManager.clearCache(getDateForYesterday());
 
         // 明日分の番組を今日の番組にずらす
@@ -75,6 +73,8 @@ public class ProgramManagerService {
         } else {
             // 明日分の番組がなければ今日の分をloadする
             Date today = getDateForToday();
+            logger.info("  today : " + format.format(today));
+
             Arrays.stream(NhkApiConstants.Service.values()).forEach(service -> {
                 OneDayServiceTable oneDayServiceTable = new OneDayServiceTable(service);
 
@@ -90,6 +90,8 @@ public class ProgramManagerService {
 
         // 明日の番組をloadし直す
         Date tomorrow = getDateForTomorrow();
+        logger.info("  tomorrow : " + format.format(tomorrow));
+
         Arrays.stream(NhkApiConstants.Service.values()).forEach(service -> {
             OneDayServiceTable oneDayServiceTable = new OneDayServiceTable(service);
 
@@ -122,10 +124,17 @@ public class ProgramManagerService {
     }
 
     private List<Program> searchTimeTable(ProgramDate date, NhkApiConstants.Area area, NhkApiConstants.Service service) {
-        List<OneDayServiceTable> source = (date.equals(ProgramDate.TODAY)) ? todayTimetable : tomorrowTimetable;
+
+        List<OneDayServiceTable> targetTimetables;
+        if (date.equals(ProgramDate.TODAY)) {
+            targetTimetables = todayTimetable;
+        } else {
+            targetTimetables = tomorrowTimetable;
+        }
+
         final List<Program> res = new ArrayList<>();
 
-        source.stream()
+        targetTimetables.stream()
                 .filter(timeTable -> timeTable.service.code.equals(service.code))
                 .findFirst()
                 .ifPresent(serviceTimeTable -> {
@@ -140,19 +149,17 @@ public class ProgramManagerService {
     }
 
     private Date getDateForToday() {
-        Calendar d = Calendar.getInstance();
-        d.setTimeZone(TimeZone.getTimeZone(JST));
+        Calendar c = DateUtils.getCalendarInJst();
 
-        if (d.get(Calendar.HOUR_OF_DAY) < 5) {
-            d.add(Calendar.DATE, -1);
+        if (c.get(Calendar.HOUR_OF_DAY) < 5) {
+            c.add(Calendar.DATE, -1);
         }
 
-        return d.getTime();
+        return c.getTime();
     }
 
     private Date getDateForYesterday() {
-        Calendar c = Calendar.getInstance();
-        c.setTimeZone(TimeZone.getTimeZone(JST));
+        Calendar c = DateUtils.getCalendarInJst();
 
         c.setTime(getDateForToday());
         c.add(Calendar.DATE, -1);
@@ -160,8 +167,7 @@ public class ProgramManagerService {
     }
 
     private Date getDateForTomorrow() {
-        Calendar c = Calendar.getInstance();
-        c.setTimeZone(TimeZone.getTimeZone(JST));
+        Calendar c = DateUtils.getCalendarInJst();
 
         c.setTime(getDateForToday());
         c.add(Calendar.DATE, 1);

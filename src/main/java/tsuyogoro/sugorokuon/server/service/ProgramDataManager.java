@@ -17,12 +17,12 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import tsuyogoro.sugorokuon.server.constant.NhkApiConstants;
 import tsuyogoro.sugorokuon.server.model.Program;
+import tsuyogoro.sugorokuon.server.utils.DateUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -55,9 +55,9 @@ public class ProgramDataManager {
 
     public List<Program> load(Date date, NhkApiConstants.Area area, NhkApiConstants.Service service) {
 
-        String year = new SimpleDateFormat("yyyy").format(date);
-        String month = new SimpleDateFormat("MM").format(date);
-        String day = new SimpleDateFormat("dd").format(date);
+        String year = DateUtils.getSimpleDateFormatInJst("yyyy").format(date);
+        String month = DateUtils.getSimpleDateFormatInJst("MM").format(date);
+        String day = DateUtils.getSimpleDateFormatInJst("dd").format(date);
 
         File cachedFile = new File(getProgramCachePath(year, month, day, area, service));
 
@@ -65,13 +65,13 @@ public class ProgramDataManager {
             if (!cachedFile.exists()) {
                 fetchProgramJson(year, month, day, area, service);
             } else {
-                logger.debug("Cache is found : " +  year + month + day
+                logger.info("Cache is found : " +  year + month + day
                         + " - " + area.displayName + " " + service.displayName);
             }
             return loadFromCacheFile(cachedFile, service);
 
         } catch (Exception e) {
-            logger.debug("Exception was thrown at load : " + year + month + day
+            logger.info("Exception was thrown at load : " + year + month + day
                     + " area = " + area.displayName + " service = " + service.displayName
                     + " errorMessage : " + e.getMessage());
 
@@ -80,9 +80,9 @@ public class ProgramDataManager {
     }
 
     public void clearCache(Date date) {
-        String year = new SimpleDateFormat("yyyy").format(date);
-        String month = new SimpleDateFormat("MM").format(date);
-        String day = new SimpleDateFormat("dd").format(date);
+        String year = DateUtils.getSimpleDateFormatInJst("yyyy").format(date);
+        String month = DateUtils.getSimpleDateFormatInJst("MM").format(date);
+        String day = DateUtils.getSimpleDateFormatInJst("dd").format(date);
 
         File cacheDir = new File(getProgramCacheDirPath(year, month, day));
 
@@ -101,7 +101,7 @@ public class ProgramDataManager {
         String date = year + "-" + month + "-" + day;
         String url = API + area.code + "/" + service.code + "/" + date + ".json?key=" + apiKey;
 
-        logger.debug("Fetch program data from : " + url);
+        logger.info("Fetch program data from : " + url);
 
         String responseInJson = new RestTemplate().getForObject(url, String.class);
         JSONArray programsInJson = new JSONObject(responseInJson).getJSONObject("list").getJSONArray(service.code);
